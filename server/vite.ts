@@ -77,16 +77,24 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Serve static files from the dist/public directory
-  app.use(express.static(distPath));
+  log(`Serving static files from: ${distPath}`);
 
-  // Serve API routes
+  // Serve static files from the dist/public directory with proper caching
+  app.use(express.static(distPath, {
+    maxAge: '1d', // Cache static assets for 1 day
+    etag: true,
+    lastModified: true,
+  }));
+
+  // API routes are already registered before this function is called
+  // This middleware just ensures they continue to work
   app.use("/api", (req, res, next) => {
     next();
   });
 
-  // For all other routes, serve the index.html file
+  // For all other routes, serve the index.html file (client-side routing)
   app.use("*", (_req, res) => {
+    log(`Serving index.html for client-side routing`);
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

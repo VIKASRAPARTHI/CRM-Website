@@ -48,12 +48,33 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Log the error but don't expose sensitive details in production
+    console.error(`Error ${status}: ${message}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(err.stack);
+    }
+
+    // Send a JSON response for API routes, HTML for others
+    if (_req.path.startsWith('/api')) {
+      res.status(status).json({ message });
+    } else {
+      // For non-API routes, we could serve a nice error page
+      res.status(status).send(`
+        <html>
+          <head><title>Error ${status}</title></head>
+          <body>
+            <h1>Error ${status}</h1>
+            <p>${message}</p>
+            <a href="/">Go back to home</a>
+          </body>
+        </html>
+      `);
+    }
   });
 
   // importantly only setup vite in development and after

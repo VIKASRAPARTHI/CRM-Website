@@ -25,9 +25,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     session({
       secret: process.env.SESSION_SECRET || "xeno-crm-secret",
       resave: false,
-      saveUninitialized: true, // Changed to true to ensure session is saved
+      saveUninitialized: true, // Ensure session is saved
       cookie: {
-        secure: false, // Set to false for local development
+        // In production, secure should be true if using HTTPS
+        secure: process.env.NODE_ENV === "production" && process.env.SECURE_COOKIE === "true",
         maxAge: 86400000, // 1 day
         httpOnly: true,
         sameSite: 'lax' // Helps with CSRF protection
@@ -49,8 +50,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const callbackURL = process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback";
 
   // For Google OAuth console configuration, the full URL is needed
-  const fullCallbackURL = `${process.env.APP_BASE_URL}${callbackURL}`;
-  console.log("Full OAuth callback URL (for Google Console):", fullCallbackURL);
+  // If APP_BASE_URL is not set, we'll use a relative URL which works in most deployment scenarios
+  const fullCallbackURL = process.env.APP_BASE_URL
+    ? `${process.env.APP_BASE_URL}${callbackURL}`
+    : callbackURL;
+
+  console.log("OAuth callback URL:", callbackURL);
+  console.log("Full OAuth callback URL (for Google Console):",
+    process.env.APP_BASE_URL ? fullCallbackURL : "Using relative URL");
 
   passport.use(
     new GoogleStrategy(
